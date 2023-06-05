@@ -1,5 +1,0 @@
-steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/doctorrx-387716/doctor-rx', '.']
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push','gcr.io/doctorrx-387716/doctor-rx']
