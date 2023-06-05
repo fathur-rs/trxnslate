@@ -1,0 +1,7 @@
+fastapi[all]
+uvicorn
+google-cloud-storage
+tensorflow
+keras
+pydantic
+opencv-python

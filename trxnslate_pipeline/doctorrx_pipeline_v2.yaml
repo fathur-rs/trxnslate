@@ -1,0 +1,838 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: doctor-rx-pipeline-v-1-0-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.22, pipelines.kubeflow.org/pipeline_compilation_time: '2023-06-05T07:17:29.904005',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "Perfroms end-to-end MLOPS",
+      "inputs": [{"default": "[\"Amlodipin\", \"Paracetamol\", \"Amoxilin\", \"CTM\",
+      \"Metformin\"]", "name": "folder_name", "optional": true, "type": "JsonArray"},
+      {"default": "/mnt", "name": "load_data_path", "optional": true, "type": "String"},
+      {"default": "128", "name": "batch_size", "optional": true, "type": "Integer"},
+      {"default": "100", "name": "epochs", "optional": true, "type": "Integer"}, {"default":
+      "testsplit", "name": "train_test_split_path", "optional": true, "type": "String"},
+      {"default": "feature_extract", "name": "feature_extraction_path", "optional":
+      true, "type": "String"}, {"default": "model", "name": "model_path", "optional":
+      true, "type": "String"}, {"default": "1.0", "name": "model_version", "optional":
+      true, "type": "Float"}], "name": "doctor-rx-pipeline-v:1.0"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.22}
+spec:
+  entrypoint: doctor-rx-pipeline-v-1-0
+  templates:
+  - name: confusion-matrix
+    container:
+      args: [--model, /tmp/inputs/model/data, --train-test-split, /tmp/inputs/train_test_split/data,
+        --mlpipeline-ui-metadata, /tmp/outputs/mlpipeline_ui_metadata/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n \
+        \   os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+        \ndef confusion_matrix(model_path,\n               train_test_split_path,\n\
+        \               mlpipeline_ui_metadata_path) :\n\n    import json, pickle\n\
+        \    import pandas as pd\n    import numpy as np\n    from collections import\
+        \ namedtuple\n    from sklearn.metrics import confusion_matrix\n    from tensorflow.keras.models\
+        \ import load_model\n    from keras.models import model_from_json\n\n    #\
+        \ loading the X_test and y_test\n    with open(f'{train_test_split_path}/test',\
+        \ 'rb') as f:\n        test_data = pd.read_pickle(f)\n\n    X_test, y_test\
+        \ = test_data\n\n    labels = {\n        0: 'Paracetamol',\n        1: 'Amoxilin',\n\
+        \        2: 'CTM',\n        3: 'Amlodipin',\n        4: 'Metformin'\n    }\n\
+        \n    # loading the model\n    model = load_model(f'{model_path}/model.h5')\n\
+        \    # prediction\n\n    y_pred = np.argmax(model.predict(X_test), axis=1)\n\
+        \n    # int to label\n    y_test_label = [labels[x] for x in y_test]\n   \
+        \ y_pred_label = [labels[x] for x in y_pred]\n\n    # confusion matrix\n \
+        \   cm = confusion_matrix(y_test_label, y_pred_label)\n    print(cm)\n   \
+        \ vocab = list(np.unique(y_test_label))\n\n    # confusion_matrix pair dataset\
+        \ \n    data = []\n    for target_index, target_row in enumerate(cm):\n  \
+        \      for predicted_index, count in enumerate(target_row):\n            data.append((vocab[target_index],\
+        \ vocab[predicted_index], count))\n\n    # convert confusion_matrix pair dataset\
+        \ to dataframe\n    df = pd.DataFrame(data,columns=['target','predicted','count'])\n\
+        \    print(df)\n    # change 'target', 'predicted' to integer strings\n  \
+        \  df[['target', 'predicted']] = df[['target', 'predicted']].astype(str)\n\
+        \    print(df)\n    # create kubeflow metric metadata for UI\n    metadata\
+        \ = {\n        \"outputs\": [\n            {\n                \"type\": \"\
+        confusion_matrix\",\n                \"format\": \"csv\",\n              \
+        \  \"schema\": [\n                    {\n                        \"name\"\
+        : \"target\",\n                        \"type\": \"CATEGORY\"\n          \
+        \          },\n                    {\n                        \"name\": \"\
+        predicted\",\n                        \"type\": \"CATEGORY\"\n           \
+        \         },\n                    {\n                        \"name\": \"\
+        count\",\n                        \"type\": \"NUMBER\"\n                 \
+        \   }\n                ],\n                \"source\": df.to_csv(header=False,\
+        \ index=False),\n                \"storage\": \"inline\",\n              \
+        \  \"labels\": [\n                    \"Amlodipin\",\n                   \
+        \ \"Amoxilin\",\n                    \"CTM\",\n                    \"Metformin\"\
+        ,\n                    \"Paracetamol\",\n                ]\n            }\n\
+        \        ]\n    }\n\n    with open(mlpipeline_ui_metadata_path, 'w') as metadata_file:\n\
+        \        json.dump(metadata, metadata_file)\n\nimport argparse\n_parser =\
+        \ argparse.ArgumentParser(prog='Confusion matrix', description='')\n_parser.add_argument(\"\
+        --model\", dest=\"model_path\", type=str, required=True, default=argparse.SUPPRESS)\n\
+        _parser.add_argument(\"--train-test-split\", dest=\"train_test_split_path\"\
+        , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+        --mlpipeline-ui-metadata\", dest=\"mlpipeline_ui_metadata_path\", type=_make_parent_dirs_and_return_path,\
+        \ required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\
+        \n_outputs = confusion_matrix(**_parsed_args)\n"
+      image: gcr.io/doctorrx-387716/doctor-rx
+    inputs:
+      artifacts:
+      - {name: tf-vgg16-model, path: /tmp/inputs/model/data}
+      - {name: train-test-splits-train_test_split, path: /tmp/inputs/train_test_split/data}
+    outputs:
+      artifacts:
+      - {name: mlpipeline-ui-metadata, path: /tmp/outputs/mlpipeline_ui_metadata/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--model", {"inputPath": "model"}, "--train-test-split", {"inputPath":
+          "train_test_split"}, "--mlpipeline-ui-metadata", {"outputPath": "mlpipeline_ui_metadata"}],
+          "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf \"%s\" \"$0\" >
+          \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n", "def _make_parent_dirs_and_return_path(file_path:
+          str):\n    import os\n    os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return
+          file_path\n\ndef confusion_matrix(model_path,\n               train_test_split_path,\n               mlpipeline_ui_metadata_path)
+          :\n\n    import json, pickle\n    import pandas as pd\n    import numpy
+          as np\n    from collections import namedtuple\n    from sklearn.metrics
+          import confusion_matrix\n    from tensorflow.keras.models import load_model\n    from
+          keras.models import model_from_json\n\n    # loading the X_test and y_test\n    with
+          open(f''{train_test_split_path}/test'', ''rb'') as f:\n        test_data
+          = pd.read_pickle(f)\n\n    X_test, y_test = test_data\n\n    labels = {\n        0:
+          ''Paracetamol'',\n        1: ''Amoxilin'',\n        2: ''CTM'',\n        3:
+          ''Amlodipin'',\n        4: ''Metformin''\n    }\n\n    # loading the model\n    model
+          = load_model(f''{model_path}/model.h5'')\n    # prediction\n\n    y_pred
+          = np.argmax(model.predict(X_test), axis=1)\n\n    # int to label\n    y_test_label
+          = [labels[x] for x in y_test]\n    y_pred_label = [labels[x] for x in y_pred]\n\n    #
+          confusion matrix\n    cm = confusion_matrix(y_test_label, y_pred_label)\n    print(cm)\n    vocab
+          = list(np.unique(y_test_label))\n\n    # confusion_matrix pair dataset \n    data
+          = []\n    for target_index, target_row in enumerate(cm):\n        for predicted_index,
+          count in enumerate(target_row):\n            data.append((vocab[target_index],
+          vocab[predicted_index], count))\n\n    # convert confusion_matrix pair dataset
+          to dataframe\n    df = pd.DataFrame(data,columns=[''target'',''predicted'',''count''])\n    print(df)\n    #
+          change ''target'', ''predicted'' to integer strings\n    df[[''target'',
+          ''predicted'']] = df[[''target'', ''predicted'']].astype(str)\n    print(df)\n    #
+          create kubeflow metric metadata for UI\n    metadata = {\n        \"outputs\":
+          [\n            {\n                \"type\": \"confusion_matrix\",\n                \"format\":
+          \"csv\",\n                \"schema\": [\n                    {\n                        \"name\":
+          \"target\",\n                        \"type\": \"CATEGORY\"\n                    },\n                    {\n                        \"name\":
+          \"predicted\",\n                        \"type\": \"CATEGORY\"\n                    },\n                    {\n                        \"name\":
+          \"count\",\n                        \"type\": \"NUMBER\"\n                    }\n                ],\n                \"source\":
+          df.to_csv(header=False, index=False),\n                \"storage\": \"inline\",\n                \"labels\":
+          [\n                    \"Amlodipin\",\n                    \"Amoxilin\",\n                    \"CTM\",\n                    \"Metformin\",\n                    \"Paracetamol\",\n                ]\n            }\n        ]\n    }\n\n    with
+          open(mlpipeline_ui_metadata_path, ''w'') as metadata_file:\n        json.dump(metadata,
+          metadata_file)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Confusion
+          matrix'', description='''')\n_parser.add_argument(\"--model\", dest=\"model_path\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--train-test-split\",
+          dest=\"train_test_split_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--mlpipeline-ui-metadata\",
+          dest=\"mlpipeline_ui_metadata_path\", type=_make_parent_dirs_and_return_path,
+          required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = confusion_matrix(**_parsed_args)\n"], "image": "gcr.io/doctorrx-387716/doctor-rx"}},
+          "inputs": [{"name": "model", "type": "String"}, {"name": "train_test_split",
+          "type": "String"}], "name": "Confusion matrix", "outputs": [{"name": "mlpipeline_ui_metadata"}]}',
+        pipelines.kubeflow.org/component_ref: '{}'}
+  - name: doctor-rx-pipeline-v-1-0
+    inputs:
+      parameters:
+      - {name: batch_size}
+      - {name: epochs}
+      - {name: folder_name}
+    dag:
+      tasks:
+      - name: confusion-matrix
+        template: confusion-matrix
+        dependencies: [tf-vgg16, train-test-splits]
+        arguments:
+          artifacts:
+          - {name: tf-vgg16-model, from: '{{tasks.tf-vgg16.outputs.artifacts.tf-vgg16-model}}'}
+          - {name: train-test-splits-train_test_split, from: '{{tasks.train-test-splits.outputs.artifacts.train-test-splits-train_test_split}}'}
+      - name: feautre-extraction
+        template: feautre-extraction
+        dependencies: [preprocessing]
+        arguments:
+          artifacts:
+          - {name: preprocessing-load_data, from: '{{tasks.preprocessing.outputs.artifacts.preprocessing-load_data}}'}
+      - name: get-data-csv-builder
+        template: get-data-csv-builder
+        arguments:
+          parameters:
+          - {name: folder_name, value: '{{inputs.parameters.folder_name}}'}
+      - name: model-registry
+        template: model-registry
+        dependencies: [tf-vgg16]
+        arguments:
+          artifacts:
+          - {name: tf-vgg16-model, from: '{{tasks.tf-vgg16.outputs.artifacts.tf-vgg16-model}}'}
+      - name: preprocessing
+        template: preprocessing
+        dependencies: [get-data-csv-builder]
+        arguments:
+          artifacts:
+          - {name: get-data-csv-builder-data_csv, from: '{{tasks.get-data-csv-builder.outputs.artifacts.get-data-csv-builder-data_csv}}'}
+      - name: roc-curve
+        template: roc-curve
+        dependencies: [tf-vgg16, train-test-splits]
+        arguments:
+          artifacts:
+          - {name: tf-vgg16-model, from: '{{tasks.tf-vgg16.outputs.artifacts.tf-vgg16-model}}'}
+          - {name: train-test-splits-train_test_split, from: '{{tasks.train-test-splits.outputs.artifacts.train-test-splits-train_test_split}}'}
+      - name: tf-vgg16
+        template: tf-vgg16
+        dependencies: [train-test-splits]
+        arguments:
+          parameters:
+          - {name: batch_size, value: '{{inputs.parameters.batch_size}}'}
+          - {name: epochs, value: '{{inputs.parameters.epochs}}'}
+          artifacts:
+          - {name: train-test-splits-train_test_split, from: '{{tasks.train-test-splits.outputs.artifacts.train-test-splits-train_test_split}}'}
+      - name: train-test-splits
+        template: train-test-splits
+        dependencies: [feautre-extraction]
+        arguments:
+          artifacts:
+          - {name: feautre-extraction-feature_extraction, from: '{{tasks.feautre-extraction.outputs.artifacts.feautre-extraction-feature_extraction}}'}
+  - name: feautre-extraction
+    container:
+      args: [--load-data, /tmp/inputs/load_data/data, --feature-extraction, /tmp/outputs/feature_extraction/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def feautre_extraction(load_data_path, feature_extraction_path):
+                # transform to desire shape for model input -> (9, 9, 512)
+
+            import pandas as pd
+            import numpy as np
+            import pickle
+            import os
+
+            with open(f"{load_data_path}/all_data", 'rb') as f:
+                all_data = pickle.load(f)
+
+            X, Y = all_data
+            print(X.shape, Y.shape)
+
+            def transform_feature(arr):
+                from keras.applications.vgg16 import VGG16
+                from keras.models import Model
+
+                model_vgg16 = VGG16(weights='imagenet', include_top=False)
+                model_vgg16 = Model(inputs=model_vgg16.inputs, outputs=model_vgg16.layers[-4].output)
+
+                features = model_vgg16.predict(arr)
+                return features
+
+            features_train = transform_feature(arr=X)
+
+            os.makedirs(feature_extraction_path, exist_ok = True)
+
+            with open(f"{feature_extraction_path}/features_extract", 'wb') as f:
+                pickle.dump((features_train, Y), f)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Feautre extraction', description='')
+        _parser.add_argument("--load-data", dest="load_data_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--feature-extraction", dest="feature_extraction_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = feautre_extraction(**_parsed_args)
+      image: gcr.io/doctorrx-387716/doctor-rx
+    inputs:
+      artifacts:
+      - {name: preprocessing-load_data, path: /tmp/inputs/load_data/data}
+    outputs:
+      artifacts:
+      - {name: feautre-extraction-feature_extraction, path: /tmp/outputs/feature_extraction/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--load-data", {"inputPath": "load_data"}, "--feature-extraction",
+          {"outputPath": "feature_extraction"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef feautre_extraction(load_data_path,
+          feature_extraction_path):\n        # transform to desire shape for model
+          input -> (9, 9, 512)\n\n    import pandas as pd\n    import numpy as np\n    import
+          pickle\n    import os\n\n    with open(f\"{load_data_path}/all_data\", ''rb'')
+          as f:\n        all_data = pickle.load(f)\n\n    X, Y = all_data\n    print(X.shape,
+          Y.shape)\n\n    def transform_feature(arr):\n        from keras.applications.vgg16
+          import VGG16\n        from keras.models import Model\n\n        model_vgg16
+          = VGG16(weights=''imagenet'', include_top=False)\n        model_vgg16 =
+          Model(inputs=model_vgg16.inputs, outputs=model_vgg16.layers[-4].output)\n\n        features
+          = model_vgg16.predict(arr)\n        return features\n\n    features_train
+          = transform_feature(arr=X)\n\n    os.makedirs(feature_extraction_path, exist_ok
+          = True)\n\n    with open(f\"{feature_extraction_path}/features_extract\",
+          ''wb'') as f:\n        pickle.dump((features_train, Y), f)\n\nimport argparse\n_parser
+          = argparse.ArgumentParser(prog=''Feautre extraction'', description='''')\n_parser.add_argument(\"--load-data\",
+          dest=\"load_data_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--feature-extraction\",
+          dest=\"feature_extraction_path\", type=_make_parent_dirs_and_return_path,
+          required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = feautre_extraction(**_parsed_args)\n"], "image": "gcr.io/doctorrx-387716/doctor-rx"}},
+          "inputs": [{"name": "load_data", "type": "String"}], "name": "Feautre extraction",
+          "outputs": [{"name": "feature_extraction", "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: get-data-csv-builder
+    container:
+      args: [--folder-name, '{{inputs.parameters.folder_name}}', --data-csv, /tmp/outputs/data_csv/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def get_data_csv_builder(folder_name, data_csv):
+            from google.cloud import storage
+            import os
+            import cv2
+            import pandas as pd
+            import numpy as np
+
+            # gcp creds
+            print("<=== initiate os env gcp creds ====>")
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'doctorrx-387716-cdaefd627b4a.json'
+
+            #bucket
+            print('<=== get bucket ===>')
+            storage_client = storage.Client()
+            bucket = storage_client.get_bucket('doctorrx_pipeline_bucket')
+
+            pixel_columns = ['label'] + [f'pixels_{i+1}' for i in range(60000)]
+            df = pd.DataFrame(columns=pixel_columns)
+
+            print('<=== iterate data ===>')
+            iter = 1
+            for folder_img in folder_name:
+                blobs = bucket.list_blobs(prefix=f'data_labelled/{folder_img}/')
+                for blob in blobs:
+                    if blob.name.endswith('/'):
+                        continue
+                    # get label
+                    lab_names = {'Paracetamol': 0, 'Amoxilin': 1, 'CTM': 2, 'Amlodipin': 3, 'Metformin': 4}
+                    label = blob.name.split("/")[1]
+
+                    # get image byte -> array
+                    contents = blob.download_as_string()
+                    decoded = cv2.imdecode(np.frombuffer(contents, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+                    img_resize = cv2.resize(decoded, (200, 100))
+                    blur = cv2.GaussianBlur(img_resize, (5,5), 0)
+                    ret3,th3 = cv2.threshold(blur.astype(np.uint8),0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+                    to_rgb_array = np.repeat(th3[..., np.newaxis], 3, -1).reshape(1, 200, 100, 3)
+                    img_ravel = to_rgb_array.ravel()
+
+                    data_concate = np.concatenate([[lab_names[str(label)]], img_ravel])
+                    df.loc[len(df.index)] = data_concate
+                    print(f'!{blob.name} - {iter} berhasil! ')
+                    iter += 1
+
+            # to_csv
+            with open(data_csv, 'w') as f:
+                df.to_csv(f, index=False)
+
+            return(print('Done!'))
+
+        import json
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Get data csv builder', description='')
+        _parser.add_argument("--folder-name", dest="folder_name", type=json.loads, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--data-csv", dest="data_csv", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = get_data_csv_builder(**_parsed_args)
+      image: gcr.io/doctorrx-387716/doctor-rx
+    inputs:
+      parameters:
+      - {name: folder_name}
+    outputs:
+      artifacts:
+      - {name: get-data-csv-builder-data_csv, path: /tmp/outputs/data_csv/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--folder-name", {"inputValue": "folder_name"}, "--data-csv",
+          {"outputPath": "data_csv"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef get_data_csv_builder(folder_name,
+          data_csv):\n    from google.cloud import storage\n    import os\n    import
+          cv2\n    import pandas as pd\n    import numpy as np\n\n    # gcp creds\n    print(\"<===
+          initiate os env gcp creds ====>\")\n    os.environ[''GOOGLE_APPLICATION_CREDENTIALS'']
+          = ''doctorrx-387716-cdaefd627b4a.json''\n\n    #bucket\n    print(''<===
+          get bucket ===>'')\n    storage_client = storage.Client()\n    bucket =
+          storage_client.get_bucket(''doctorrx_pipeline_bucket'')\n\n    pixel_columns
+          = [''label''] + [f''pixels_{i+1}'' for i in range(60000)]\n    df = pd.DataFrame(columns=pixel_columns)\n\n    print(''<===
+          iterate data ===>'')\n    iter = 1\n    for folder_img in folder_name:\n        blobs
+          = bucket.list_blobs(prefix=f''data_labelled/{folder_img}/'')\n        for
+          blob in blobs:\n            if blob.name.endswith(''/''):\n                continue\n            #
+          get label\n            lab_names = {''Paracetamol'': 0, ''Amoxilin'': 1,
+          ''CTM'': 2, ''Amlodipin'': 3, ''Metformin'': 4}\n            label = blob.name.split(\"/\")[1]\n\n            #
+          get image byte -> array\n            contents = blob.download_as_string()\n            decoded
+          = cv2.imdecode(np.frombuffer(contents, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)\n            img_resize
+          = cv2.resize(decoded, (200, 100))\n            blur = cv2.GaussianBlur(img_resize,
+          (5,5), 0)\n            ret3,th3 = cv2.threshold(blur.astype(np.uint8),0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)\n            to_rgb_array
+          = np.repeat(th3[..., np.newaxis], 3, -1).reshape(1, 200, 100, 3)\n            img_ravel
+          = to_rgb_array.ravel()\n\n            data_concate = np.concatenate([[lab_names[str(label)]],
+          img_ravel])\n            df.loc[len(df.index)] = data_concate\n            print(f''!{blob.name}
+          - {iter} berhasil! '')\n            iter += 1\n\n    # to_csv\n    with
+          open(data_csv, ''w'') as f:\n        df.to_csv(f, index=False)\n\n    return(print(''Done!''))\n\nimport
+          json\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Get data
+          csv builder'', description='''')\n_parser.add_argument(\"--folder-name\",
+          dest=\"folder_name\", type=json.loads, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--data-csv\",
+          dest=\"data_csv\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = get_data_csv_builder(**_parsed_args)\n"], "image": "gcr.io/doctorrx-387716/doctor-rx"}},
+          "inputs": [{"name": "folder_name", "type": "JsonArray"}], "name": "Get data
+          csv builder", "outputs": [{"name": "data_csv"}]}', pipelines.kubeflow.org/component_ref: '{}',
+        pipelines.kubeflow.org/arguments.parameters: '{"folder_name": "{{inputs.parameters.folder_name}}"}'}
+  - name: model-registry
+    container:
+      args: [--model, /tmp/inputs/model/data, --model-version, '1.0']
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def model_registry(model_path,
+                           model_version):
+            from google.cloud import storage
+            import os
+
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'doctorrx-387716-cdaefd627b4a.json'
+
+            storage_client = storage.Client()
+            bucket = storage_client.get_bucket('doctorrx_pipeline_bucket')
+            blob = bucket.blob(f'models/{model_version}/model.h5')
+
+            blob.upload_from_filename(f'{model_path}/model.h5')
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Model registry', description='')
+        _parser.add_argument("--model", dest="model_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--model-version", dest="model_version", type=float, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = model_registry(**_parsed_args)
+      image: gcr.io/doctorrx-387716/doctor-rx
+    inputs:
+      artifacts:
+      - {name: tf-vgg16-model, path: /tmp/inputs/model/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--model", {"inputPath": "model"}, "--model-version", {"inputValue":
+          "model_version"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def model_registry(model_path,\n                   model_version):\n    from
+          google.cloud import storage\n    import os\n\n    os.environ[''GOOGLE_APPLICATION_CREDENTIALS'']
+          = ''doctorrx-387716-cdaefd627b4a.json''\n\n    storage_client = storage.Client()\n    bucket
+          = storage_client.get_bucket(''doctorrx_pipeline_bucket'')\n    blob = bucket.blob(f''models/{model_version}/model.h5'')\n\n    blob.upload_from_filename(f''{model_path}/model.h5'')\n\nimport
+          argparse\n_parser = argparse.ArgumentParser(prog=''Model registry'', description='''')\n_parser.add_argument(\"--model\",
+          dest=\"model_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--model-version\",
+          dest=\"model_version\", type=float, required=True, default=argparse.SUPPRESS)\n_parsed_args
+          = vars(_parser.parse_args())\n\n_outputs = model_registry(**_parsed_args)\n"],
+          "image": "gcr.io/doctorrx-387716/doctor-rx"}}, "inputs": [{"name": "model",
+          "type": "String"}, {"name": "model_version", "type": "Float"}], "name":
+          "Model registry"}', pipelines.kubeflow.org/component_ref: '{}', pipelines.kubeflow.org/arguments.parameters: '{"model_version":
+          "1.0"}'}
+  - name: preprocessing
+    container:
+      args: [--data-csv, /tmp/inputs/data_csv/data, --load-data, /tmp/outputs/load_data/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n \
+        \   os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+        \ndef preprocessing(data_csv, load_data_path):\n    import pandas as pd\n\
+        \    import numpy as np\n    import os\n    import pickle\n\n    # open data\n\
+        \    with open(data_csv) as f:\n        df = pd.read_csv(f)\n\n    # get label\
+        \ and attribute    \n    X = df.iloc[:, 1:].values.reshape(-1, 200, 100, 3)\
+        \ / 255\n    Y = df['label']\n\n    # createing the preprocess directory\n\
+        \    os.makedirs(load_data_path, exist_ok=True)\n\n    # save the label and\
+        \ features to be used by preprocess components\n    with open(f\"{load_data_path}/all_data\"\
+        , 'wb') as f:\n        pickle.dump((X, Y), f)\n\n    return(print('Done!'))\n\
+        \nimport argparse\n_parser = argparse.ArgumentParser(prog='Preprocessing',\
+        \ description='')\n_parser.add_argument(\"--data-csv\", dest=\"data_csv\"\
+        , type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+        --load-data\", dest=\"load_data_path\", type=_make_parent_dirs_and_return_path,\
+        \ required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\
+        \n_outputs = preprocessing(**_parsed_args)\n"
+      image: gcr.io/doctorrx-387716/doctor-rx
+    inputs:
+      artifacts:
+      - {name: get-data-csv-builder-data_csv, path: /tmp/inputs/data_csv/data}
+    outputs:
+      artifacts:
+      - {name: preprocessing-load_data, path: /tmp/outputs/load_data/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--data-csv", {"inputPath": "data_csv"}, "--load-data", {"outputPath":
+          "load_data"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef preprocessing(data_csv, load_data_path):\n    import
+          pandas as pd\n    import numpy as np\n    import os\n    import pickle\n\n    #
+          open data\n    with open(data_csv) as f:\n        df = pd.read_csv(f)\n\n    #
+          get label and attribute    \n    X = df.iloc[:, 1:].values.reshape(-1, 200,
+          100, 3) / 255\n    Y = df[''label'']\n\n    # createing the preprocess directory\n    os.makedirs(load_data_path,
+          exist_ok=True)\n\n    # save the label and features to be used by preprocess
+          components\n    with open(f\"{load_data_path}/all_data\", ''wb'') as f:\n        pickle.dump((X,
+          Y), f)\n\n    return(print(''Done!''))\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Preprocessing'',
+          description='''')\n_parser.add_argument(\"--data-csv\", dest=\"data_csv\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--load-data\",
+          dest=\"load_data_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = preprocessing(**_parsed_args)\n"], "image": "gcr.io/doctorrx-387716/doctor-rx"}},
+          "inputs": [{"name": "data_csv"}], "name": "Preprocessing", "outputs": [{"name":
+          "load_data", "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}'}
+  - name: roc-curve
+    container:
+      args: [--model, /tmp/inputs/model/data, --train-test-split, /tmp/inputs/train_test_split/data,
+        --mlpipeline-ui-metadata, /tmp/outputs/mlpipeline_ui_metadata/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def roc_curve(model_path,
+                       train_test_split_path,
+                       mlpipeline_ui_metadata_path):
+            from tensorflow.keras.models import load_model
+            import pandas as pd
+            import json
+            import numpy as np
+            from sklearn.metrics import roc_curve
+
+            # loading the X_test and y_test
+            with open(f'{train_test_split_path}/test', 'rb') as f:
+                test_data = pd.read_pickle(f)
+
+            X_test, y_test = test_data
+
+            # loading the model
+            model = load_model(f'{model_path}/model.h5')
+
+            # prediction
+            y_pred = np.argmax(model.predict(X_test), axis=1)
+
+            fpr, tpr, thresholds = roc_curve(y_true=y_test, y_score=y_pred, pos_label=True)
+            # testing
+            df = pd.DataFrame({
+                'fpr':fpr,
+                'tpr': tpr,
+                'thresholds': thresholds
+            })
+            print(df)
+
+            metadata = {
+                    'outputs': [{
+                    'type': 'roc',
+                    'format': 'csv',
+                    'schema': [
+                        {'name': 'fpr', 'type': 'NUMBER'},
+                        {'name': 'tpr', 'type': 'NUMBER'},
+                        {'name': 'thresholds', 'type': 'NUMBER'},
+                    ],
+                    "source": df.to_csv(header=False, index=False),
+                    "storage": "inline",
+                    }]
+                }
+
+            with open(mlpipeline_ui_metadata_path, 'w') as metadata_file:
+                json.dump(metadata, metadata_file)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Roc curve', description='')
+        _parser.add_argument("--model", dest="model_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--train-test-split", dest="train_test_split_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--mlpipeline-ui-metadata", dest="mlpipeline_ui_metadata_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = roc_curve(**_parsed_args)
+      image: gcr.io/doctorrx-387716/doctor-rx
+    inputs:
+      artifacts:
+      - {name: tf-vgg16-model, path: /tmp/inputs/model/data}
+      - {name: train-test-splits-train_test_split, path: /tmp/inputs/train_test_split/data}
+    outputs:
+      artifacts:
+      - {name: mlpipeline-ui-metadata, path: /tmp/outputs/mlpipeline_ui_metadata/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--model", {"inputPath": "model"}, "--train-test-split", {"inputPath":
+          "train_test_split"}, "--mlpipeline-ui-metadata", {"outputPath": "mlpipeline_ui_metadata"}],
+          "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf \"%s\" \"$0\" >
+          \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n", "def _make_parent_dirs_and_return_path(file_path:
+          str):\n    import os\n    os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return
+          file_path\n\ndef roc_curve(model_path,\n               train_test_split_path,\n               mlpipeline_ui_metadata_path):\n    from
+          tensorflow.keras.models import load_model\n    import pandas as pd\n    import
+          json\n    import numpy as np\n    from sklearn.metrics import roc_curve\n\n    #
+          loading the X_test and y_test\n    with open(f''{train_test_split_path}/test'',
+          ''rb'') as f:\n        test_data = pd.read_pickle(f)\n\n    X_test, y_test
+          = test_data\n\n    # loading the model\n    model = load_model(f''{model_path}/model.h5'')\n\n    #
+          prediction\n    y_pred = np.argmax(model.predict(X_test), axis=1)\n\n    fpr,
+          tpr, thresholds = roc_curve(y_true=y_test, y_score=y_pred, pos_label=True)\n    #
+          testing\n    df = pd.DataFrame({\n        ''fpr'':fpr,\n        ''tpr'':
+          tpr,\n        ''thresholds'': thresholds\n    })\n    print(df)\n\n    metadata
+          = {\n            ''outputs'': [{\n            ''type'': ''roc'',\n            ''format'':
+          ''csv'',\n            ''schema'': [\n                {''name'': ''fpr'',
+          ''type'': ''NUMBER''},\n                {''name'': ''tpr'', ''type'': ''NUMBER''},\n                {''name'':
+          ''thresholds'', ''type'': ''NUMBER''},\n            ],\n            \"source\":
+          df.to_csv(header=False, index=False),\n            \"storage\": \"inline\",\n            }]\n        }\n\n    with
+          open(mlpipeline_ui_metadata_path, ''w'') as metadata_file:\n        json.dump(metadata,
+          metadata_file)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Roc
+          curve'', description='''')\n_parser.add_argument(\"--model\", dest=\"model_path\",
+          type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--train-test-split\",
+          dest=\"train_test_split_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--mlpipeline-ui-metadata\",
+          dest=\"mlpipeline_ui_metadata_path\", type=_make_parent_dirs_and_return_path,
+          required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = roc_curve(**_parsed_args)\n"], "image": "gcr.io/doctorrx-387716/doctor-rx"}},
+          "inputs": [{"name": "model", "type": "String"}, {"name": "train_test_split",
+          "type": "String"}], "name": "Roc curve", "outputs": [{"name": "mlpipeline_ui_metadata"}]}',
+        pipelines.kubeflow.org/component_ref: '{}'}
+  - name: tf-vgg16
+    container:
+      args: [--batch-size, '{{inputs.parameters.batch_size}}', --epochs, '{{inputs.parameters.epochs}}',
+        --train-test-split, /tmp/inputs/train_test_split/data, --model, /tmp/outputs/model/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n \
+        \   os.makedirs(os.path.dirname(file_path), exist_ok=True)\n    return file_path\n\
+        \ndef tf_vgg16(batch_size,\n             epochs,\n             train_test_split_path,\n\
+        \             model_path):\n\n    import os, pickle\n    import numpy as np\n\
+        \    import pandas as pd\n    from keras.layers import Input, Dense, Conv2D,\
+        \ MaxPooling2D, Flatten\n    from keras.applications.vgg16 import VGG16\n\
+        \    from keras.models import Model\n    from tensorflow.keras.callbacks import\
+        \ ModelCheckpoint\n\n    #loading the train data\n    with open(f'{train_test_split_path}/train',\
+        \ 'rb') as f:\n        train_data = pd.read_pickle(f)\n\n    X_train, y_train\
+        \ = train_data\n    print(X_train.shape, y_train.shape)\n\n    # model building\n\
+        \    model_vgg = VGG16(weights='imagenet', include_top=False)\n    layer_input\
+        \ = Input(shape= (12, 6, 512))\n\n    x = layer_input\n    x = Conv2D(64,\
+        \ (3, 3), activation='relu')(x)\n    x = MaxPooling2D(pool_size=(2, 2))(x)\n\
+        \    x = Flatten()(x)\n    x = Dense(100,activation='relu')(x)\n    x = Dense(6,activation='softmax')(x)\n\
+        \n    model_vgg = Model(layer_input, x)\n    model_vgg.compile(optimizer =\
+        \ 'adam', loss = 'sparse_categorical_crossentropy', metrics=['accuracy'])\
+        \    \n    model_vgg.summary()\n\n    os.makedirs(model_path, exist_ok=True)\n\
+        \    checkpoint = ModelCheckpoint(f\"{model_path}/model.h5\", monitor='val_loss',\
+        \ verbose=1,save_best_only=True, mode='auto', period=1)\n    # fit the data\
+        \ to model\n    history = model_vgg.fit(\n        np.array(X_train),\n   \
+        \     np.array(y_train),\n        batch_size=batch_size,\n        epochs=epochs,\n\
+        \        validation_split=0.2,\n        callbacks=[checkpoint],\n        shuffle=True\n\
+        \    )\n    print(history.history['accuracy'])\n\n    # oading the X_test\
+        \ and y_test\n    with open(f'{train_test_split_path}/test', 'rb') as f:\n\
+        \        test_data = pd.read_pickle(f)\n\n    X_test, y_test = test_data\n\
+        \n    # evaluate the model and print the results\n    test_loss, test_acc\
+        \ = model_vgg.evaluate(np.array(X_test), np.array(y_test), verbose=0)\n  \
+        \  print(\"Test_loss: {}, Test_accuracy: {} \".format(test_loss,test_acc))\n\
+        \nimport argparse\n_parser = argparse.ArgumentParser(prog='Tf vgg16', description='')\n\
+        _parser.add_argument(\"--batch-size\", dest=\"batch_size\", type=int, required=True,\
+        \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--epochs\", dest=\"epochs\"\
+        , type=int, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"\
+        --train-test-split\", dest=\"train_test_split_path\", type=str, required=True,\
+        \ default=argparse.SUPPRESS)\n_parser.add_argument(\"--model\", dest=\"model_path\"\
+        , type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)\n\
+        _parsed_args = vars(_parser.parse_args())\n\n_outputs = tf_vgg16(**_parsed_args)\n"
+      image: gcr.io/doctorrx-387716/doctor-rx
+    inputs:
+      parameters:
+      - {name: batch_size}
+      - {name: epochs}
+      artifacts:
+      - {name: train-test-splits-train_test_split, path: /tmp/inputs/train_test_split/data}
+    outputs:
+      artifacts:
+      - {name: tf-vgg16-model, path: /tmp/outputs/model/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--batch-size", {"inputValue": "batch_size"}, "--epochs", {"inputValue":
+          "epochs"}, "--train-test-split", {"inputPath": "train_test_split"}, "--model",
+          {"outputPath": "model"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef tf_vgg16(batch_size,\n             epochs,\n             train_test_split_path,\n             model_path):\n\n    import
+          os, pickle\n    import numpy as np\n    import pandas as pd\n    from keras.layers
+          import Input, Dense, Conv2D, MaxPooling2D, Flatten\n    from keras.applications.vgg16
+          import VGG16\n    from keras.models import Model\n    from tensorflow.keras.callbacks
+          import ModelCheckpoint\n\n    #loading the train data\n    with open(f''{train_test_split_path}/train'',
+          ''rb'') as f:\n        train_data = pd.read_pickle(f)\n\n    X_train, y_train
+          = train_data\n    print(X_train.shape, y_train.shape)\n\n    # model building\n    model_vgg
+          = VGG16(weights=''imagenet'', include_top=False)\n    layer_input = Input(shape=
+          (12, 6, 512))\n\n    x = layer_input\n    x = Conv2D(64, (3, 3), activation=''relu'')(x)\n    x
+          = MaxPooling2D(pool_size=(2, 2))(x)\n    x = Flatten()(x)\n    x = Dense(100,activation=''relu'')(x)\n    x
+          = Dense(6,activation=''softmax'')(x)\n\n    model_vgg = Model(layer_input,
+          x)\n    model_vgg.compile(optimizer = ''adam'', loss = ''sparse_categorical_crossentropy'',
+          metrics=[''accuracy''])    \n    model_vgg.summary()\n\n    os.makedirs(model_path,
+          exist_ok=True)\n    checkpoint = ModelCheckpoint(f\"{model_path}/model.h5\",
+          monitor=''val_loss'', verbose=1,save_best_only=True, mode=''auto'', period=1)\n    #
+          fit the data to model\n    history = model_vgg.fit(\n        np.array(X_train),\n        np.array(y_train),\n        batch_size=batch_size,\n        epochs=epochs,\n        validation_split=0.2,\n        callbacks=[checkpoint],\n        shuffle=True\n    )\n    print(history.history[''accuracy''])\n\n    #
+          oading the X_test and y_test\n    with open(f''{train_test_split_path}/test'',
+          ''rb'') as f:\n        test_data = pd.read_pickle(f)\n\n    X_test, y_test
+          = test_data\n\n    # evaluate the model and print the results\n    test_loss,
+          test_acc = model_vgg.evaluate(np.array(X_test), np.array(y_test), verbose=0)\n    print(\"Test_loss:
+          {}, Test_accuracy: {} \".format(test_loss,test_acc))\n\nimport argparse\n_parser
+          = argparse.ArgumentParser(prog=''Tf vgg16'', description='''')\n_parser.add_argument(\"--batch-size\",
+          dest=\"batch_size\", type=int, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--epochs\",
+          dest=\"epochs\", type=int, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--train-test-split\",
+          dest=\"train_test_split_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--model\",
+          dest=\"model_path\", type=_make_parent_dirs_and_return_path, required=True,
+          default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = tf_vgg16(**_parsed_args)\n"], "image": "gcr.io/doctorrx-387716/doctor-rx"}},
+          "inputs": [{"name": "batch_size", "type": "Integer"}, {"name": "epochs",
+          "type": "Integer"}, {"name": "train_test_split", "type": "String"}], "name":
+          "Tf vgg16", "outputs": [{"name": "model", "type": "String"}]}', pipelines.kubeflow.org/component_ref: '{}',
+        pipelines.kubeflow.org/arguments.parameters: '{"batch_size": "{{inputs.parameters.batch_size}}",
+          "epochs": "{{inputs.parameters.epochs}}"}'}
+  - name: train-test-splits
+    container:
+      args: [--feature-extraction, /tmp/inputs/feature_extraction/data, --train-test-split,
+        /tmp/outputs/train_test_split/data]
+      command:
+      - sh
+      - -ec
+      - |
+        program_path=$(mktemp)
+        printf "%s" "$0" > "$program_path"
+        python3 -u "$program_path" "$@"
+      - |
+        def _make_parent_dirs_and_return_path(file_path: str):
+            import os
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            return file_path
+
+        def train_test_splits(feature_extraction_path, train_test_split_path):
+            import pandas as pd
+            import os
+            import pickle
+            from sklearn.model_selection import train_test_split
+
+            # load data
+            with open(f"{feature_extraction_path}/features_extract", 'rb') as f:
+                all_data = pickle.load(f)
+
+            features_train, features_test = all_data
+
+            # train test split
+            X_train, X_test, y_train, y_test = train_test_split(features_train, features_test, test_size=0.2, random_state=42, stratify=features_test)
+
+            os.makedirs(train_test_split_path, exist_ok = True)
+
+            # pickle train data
+            with open(f"{train_test_split_path}/train", 'wb') as f:
+                pickle.dump((X_train, y_train), f)
+
+            # pickle test data
+            with open(f"{train_test_split_path}/test", 'wb') as f:
+                pickle.dump((X_test, y_test), f)
+
+        import argparse
+        _parser = argparse.ArgumentParser(prog='Train test splits', description='')
+        _parser.add_argument("--feature-extraction", dest="feature_extraction_path", type=str, required=True, default=argparse.SUPPRESS)
+        _parser.add_argument("--train-test-split", dest="train_test_split_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+        _parsed_args = vars(_parser.parse_args())
+
+        _outputs = train_test_splits(**_parsed_args)
+      image: gcr.io/doctorrx-387716/doctor-rx
+    inputs:
+      artifacts:
+      - {name: feautre-extraction-feature_extraction, path: /tmp/inputs/feature_extraction/data}
+    outputs:
+      artifacts:
+      - {name: train-test-splits-train_test_split, path: /tmp/outputs/train_test_split/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.22
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"implementation": {"container":
+          {"args": ["--feature-extraction", {"inputPath": "feature_extraction"}, "--train-test-split",
+          {"outputPath": "train_test_split"}], "command": ["sh", "-ec", "program_path=$(mktemp)\nprintf
+          \"%s\" \"$0\" > \"$program_path\"\npython3 -u \"$program_path\" \"$@\"\n",
+          "def _make_parent_dirs_and_return_path(file_path: str):\n    import os\n    os.makedirs(os.path.dirname(file_path),
+          exist_ok=True)\n    return file_path\n\ndef train_test_splits(feature_extraction_path,
+          train_test_split_path):\n    import pandas as pd\n    import os\n    import
+          pickle\n    from sklearn.model_selection import train_test_split\n\n    #
+          load data\n    with open(f\"{feature_extraction_path}/features_extract\",
+          ''rb'') as f:\n        all_data = pickle.load(f)\n\n    features_train,
+          features_test = all_data\n\n    # train test split\n    X_train, X_test,
+          y_train, y_test = train_test_split(features_train, features_test, test_size=0.2,
+          random_state=42, stratify=features_test)\n\n    os.makedirs(train_test_split_path,
+          exist_ok = True)\n\n    # pickle train data\n    with open(f\"{train_test_split_path}/train\",
+          ''wb'') as f:\n        pickle.dump((X_train, y_train), f)\n\n    # pickle
+          test data\n    with open(f\"{train_test_split_path}/test\", ''wb'') as f:\n        pickle.dump((X_test,
+          y_test), f)\n\nimport argparse\n_parser = argparse.ArgumentParser(prog=''Train
+          test splits'', description='''')\n_parser.add_argument(\"--feature-extraction\",
+          dest=\"feature_extraction_path\", type=str, required=True, default=argparse.SUPPRESS)\n_parser.add_argument(\"--train-test-split\",
+          dest=\"train_test_split_path\", type=_make_parent_dirs_and_return_path,
+          required=True, default=argparse.SUPPRESS)\n_parsed_args = vars(_parser.parse_args())\n\n_outputs
+          = train_test_splits(**_parsed_args)\n"], "image": "gcr.io/doctorrx-387716/doctor-rx"}},
+          "inputs": [{"name": "feature_extraction", "type": "String"}], "name": "Train
+          test splits", "outputs": [{"name": "train_test_split", "type": "String"}]}',
+        pipelines.kubeflow.org/component_ref: '{}'}
+  arguments:
+    parameters:
+    - {name: folder_name, value: '["Amlodipin", "Paracetamol", "Amoxilin", "CTM",
+        "Metformin"]'}
+    - {name: load_data_path, value: /mnt}
+    - {name: batch_size, value: '128'}
+    - {name: epochs, value: '100'}
+    - {name: train_test_split_path, value: testsplit}
+    - {name: feature_extraction_path, value: feature_extract}
+    - {name: model_path, value: model}
+    - {name: model_version, value: '1.0'}
+  serviceAccountName: pipeline-runner
