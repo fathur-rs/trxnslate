@@ -1,0 +1,11 @@
+opencv-python
+matplotlib
+seaborn
+kfp
+numpy
+fsspec
+gcsfs
+scikit-learn
+tensorflow
+pandas
+keras
