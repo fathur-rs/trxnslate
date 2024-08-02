@@ -8,3 +8,10 @@ python-dotenv
 torch
 transformers
 Werkzeug
+langchain
+langchain_community
+openai
+opencv-python
+ultralytics
+git+https://github.com/THU-MIG/yolov10.git
+supervision
