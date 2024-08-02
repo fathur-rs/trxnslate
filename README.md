@@ -1,3 +1,2 @@
-# trxnslate
-Doctor's Handwritten Prescription Recognition System
+# TRxNSLATE: OCR + LLMs for explaining handwritten medical prescription
 

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  flask-app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - user-db:/app/instance  
+    env_file:
+      - .env
+
+volumes:
+  user-db: 

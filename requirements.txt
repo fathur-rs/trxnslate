@@ -1,0 +1,10 @@
+Flask
+Flask-Cors
+Flask-JWT-Extended
+Flask-Limiter
+Flask-SQLAlchemy
+pydantic
+python-dotenv
+torch
+transformers
+Werkzeug
