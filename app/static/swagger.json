@@ -1,0 +1,401 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "TRxNSLATE API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "description": "Register new user",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "body",
+            "description": "User registration data",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserRegistration"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "User created successfully"
+          },
+          "400": {
+            "description": "Bad Request - Invalid username or password"
+          },
+          "409": {
+            "description": "Conflict - User already exists or constraint violation"
+          },
+          "500": {
+            "description": "Internal Server Error - An error occurred during registration"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "description": "User login",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "credentials",
+            "in": "body",
+            "description": "User login credentials",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/LoginCredentials"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful login",
+            "schema": {
+              "$ref": "#/definitions/LoginResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request - No data provided or Invalid JSON data"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid credentials"
+          },
+          "500": {
+            "description": "Internal Server Error - An error occurred during login"
+          }
+        }
+      }
+    },
+    "/api/auth/users": {
+      "get": {
+        "description": "List all users (Active Admin only)",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "type": "string",
+            "required": true,
+            "description": "JWT token for an active admin. Must be in the format: Bearer {token}"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of users list",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/UserListItem"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing token, or missing 'Bearer' prefix"
+          },
+          "403": {
+            "description": "Forbidden - User is not an active admin"
+          },
+          "500": {
+            "description": "Internal Server Error - An error occurred while retrieving users"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/auth/delete_user/": {
+      "delete": {
+        "description": "Soft delete a user (Active Admin only)",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "type": "string",
+            "required": true,
+            "description": "JWT token for an active admin. Must be in the format: Bearer {token}"
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "type": "integer",
+            "required": true,
+            "description": "ID of the user to be deleted"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully"
+          },
+          "400": {
+            "description": "Bad Request - No user ID provided"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing token, or missing 'Bearer' prefix"
+          },
+          "403": {
+            "description": "Forbidden - User is not an active admin"
+          },
+          "404": {
+            "description": "Not Found - Admin not found or User does not exist"
+          },
+          "409": {
+            "description": "Conflict - User deletion failed due to a constraint violation"
+          },
+          "500": {
+            "description": "Internal Server Error - An error occurred during deleting user"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/model/ocr": {
+      "post": {
+        "description": "Perform OCR on an input image",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "type": "string",
+            "required": true,
+            "description": "JWT token for authentication. Must be in the format: Bearer {token}"
+          },
+          {
+            "name": "image",
+            "in": "body",
+            "description": "Base64 encoded image data",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/InputImageBase64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image processed successfully",
+            "schema": {
+              "$ref": "#/definitions/OCRResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request - No image data in the request or error processing image"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing token, or missing 'Bearer' prefix"
+          },
+          "500": {
+            "description": "Internal Server Error - An error occurred during OCR processing"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/model/generate_prescription_explanations": {
+      "post": {
+        "description": "Generate LLM explanations from prescription text",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "type": "string",
+            "required": true,
+            "description": "JWT token for authentication. Must be in the format: Bearer {token}"
+          },
+          {
+            "name": "prescription_text",
+            "in": "body",
+            "description": "Prescription text for analysis",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/PrescriptionText"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Explanations generated successfully",
+            "schema": {
+              "$ref": "#/definitions/PrescriptionExplanation"
+            }
+          },
+          "400": {
+            "description": "Bad Request - No prescription text in the request or error generating explanations"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing token, or missing 'Bearer' prefix"
+          },
+          "500": {
+            "description": "Internal Server Error - An error occurred during explanation generation"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "JWT token for authentication. Must be prefixed with 'Bearer '. For example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'"
+    }
+  },
+  "definitions": {
+    "UserRegistration": {
+      "type": "object",
+      "required": ["username", "password"],
+      "properties": {
+        "username": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-zA-Z0-9_]+$",
+          "description": "Username must contain only letters, numbers, and underscores"
+        },
+        "password": {
+          "type": "string",
+          "minLength": 12,
+          "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{12,}$",
+          "description": "Password must be at least 12 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character"
+        }
+      }
+    },
+    "LoginCredentials": {
+      "type": "object",
+      "required": ["username", "password", "user_type"],
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "User's username"
+        },
+        "password": {
+          "type": "string",
+          "description": "User's password"
+        },
+        "user_type": {
+          "type": "string",
+          "enum": ["user", "admin"],
+          "description": "Type of user account"
+        }
+      }
+    },
+    "LoginResponse": {
+      "type": "object",
+      "properties": {
+        "access_token": {
+          "type": "string",
+          "description": "JWT access token"
+        },
+        "refresh_token": {
+          "type": "string",
+          "description": "JWT refresh token"
+        },
+        "user_type": {
+          "type": "string",
+          "enum": ["user", "admin"],
+          "description": "Type of user account"
+        }
+      }
+    },
+    "UserListItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "User's unique identifier"
+        },
+        "username": {
+          "type": "string",
+          "description": "User's username"
+        }
+      }
+    },
+    "InputImageBase64": {
+      "type": "object",
+      "required": ["image"],
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Base64 encoded image data"
+        }
+      }
+    },
+    "OCRResponse": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Base64 encoded processed image with OCR annotations"
+        },
+        "prescription_text": {
+          "type": "string",
+          "description": "Extracted text from the image"
+        }
+      }
+    },
+    "PrescriptionText": {
+      "type": "object",
+      "required": ["prescription_text"],
+      "properties": {
+        "prescription_text": {
+          "type": "string",
+          "description": "Text of the prescription to be analyzed"
+        }
+      }
+    },
+    "PrescriptionExplanation": {
+      "type": "object",
+      "properties": {
+        "explanation": {
+          "type": "string",
+          "description": "Generated explanation of the prescription"
+        }
+      }
+    }
+  }
+}

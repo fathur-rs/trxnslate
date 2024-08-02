@@ -73,7 +73,7 @@ class OpticalCharacterRecognition:
     @lru_cache(maxsize=1)
     def load_yolo_model(self):
         absolute_path = os.path.join(self.cwd, "ml_model/yolov10/best.pt")
-        logging.info(f"📂 YOLO model path: {absolute_path}")
+        logging.info(f"📂 YOLO model local path: {absolute_path}")
         if os.path.exists(absolute_path):
             return YOLOv10(absolute_path)
         else:

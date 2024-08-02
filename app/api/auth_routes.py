@@ -45,7 +45,7 @@ def register():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error("❌ Error creating new user: %s", str(e))
-        return make_response_util(500, description="An error occurred during registration", error="Internal Server Error")
+        return make_response_util(500, description="An error occurred during registration, Check Register JSON Schema", error="Internal Server Error")
 
     
 @auth_blueprint.route("/delete_user/", methods=["DELETE"])
@@ -72,8 +72,8 @@ def delete_user():
             return make_response_util(404, description="User does not exist", error="Not Found")
         
         user_to_delete.is_active = False
-        user_to_delete.delete_at = db.func.current_timestamp()
-        user_to_delete.deleted_by = "Admin"
+        user_to_delete.deleted_at = datetime.utcnow()
+        user_to_delete.deleted_by = f"Admin {admin_id}"
         
         db.session.commit()
         

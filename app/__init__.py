@@ -5,6 +5,7 @@ from flask_limiter.util import get_remote_address
 from .extensions.db import db
 from .models.dbSchema import User, Admin
 from flask_jwt_extended import JWTManager
+from flask_swagger_ui import get_swaggerui_blueprint
 
 from . import create_admin
 
@@ -33,7 +34,7 @@ def create_app():
     # Initialize Extensions
     db.init_app(app)
     jwt = JWTManager(app)
-    limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["50 per hour"])
+    limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["1000000 per hour"])
 
     with app.app_context():
         db.create_all()
@@ -57,5 +58,15 @@ def create_app():
     
     # Create Admin
     create_admin.init_app(app)
+    
+    # Swagger
+    swagger_ui_blueprint = get_swaggerui_blueprint(
+        '/api/swagger',
+        '/static/swagger.json',
+        config={
+            'app_name': "TRxNSLATE API"
+        }
+    )
+    app.register_blueprint(swagger_ui_blueprint, url_prefix='/api/swagger')
         
     return app

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, field_validator, Field
 import re
+from ..utilities import make_response_util
 
 class Register(BaseModel):
     username: str = Field(..., min_length=1, max_length=80)
@@ -20,7 +21,7 @@ class Register(BaseModel):
     
 class Login(BaseModel):
     username: str = Field(..., min_length=1, max_length=80)
-    password: str = Field(..., min_length=12)
+    password: str = Field(..., min_length=1)
     user_type: str = Field(default='user')
     
     @field_validator('username')
