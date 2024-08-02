@@ -1,12 +1,10 @@
 # TRxNSLATE API: OCR + LLMs for explaining handwritten medical prescription
 
-## Overview
-This program utilizes advanced optical character recognition (OCR) to extract and digitize handwritten text from medical prescription images. It employs YOLOv10 to detect and highlight critical elements within the prescription, such as drug names, instructions, and dosages. These detected segments are then cropped and processed using Transformer Optical Character Recognition (TrOCR), which converts the handwritten segments into digital text. Finally, the digitized prescription text is passed to a Large Language Model, primarily using LLama 3.1 70B, with extensive prompt engineering to generate the output in a specific format.
+This program utilizes advanced optical character recognition (OCR) system to extract and digitize handwritten text from medical prescription images. It employs YOLOv10 to detect and highlight critical elements within the prescription, such as drug names, instructions, and dosages. These detected segments are then cropped and processed using Transformer Optical Character Recognition (TrOCR), which converts the handwritten segments into digital text. Finally, the digitized prescription text is passed to a Large Language Model, primarily using LLama 3.1 70B, with extensive prompt engineering to generate the output in a specific format.
 
 This project specifically aims to support the Indonesian prescription format and language. It helps patients who struggle to read medical prescriptions due to lack of expertise or poor handwriting from doctors. Additionally, it offers the potential to streamline healthcare workflows by automating the prescription review process, thereby enhancing efficiency and accuracy in medical care.
 
 ## Endpoints Documentation
-This is the TRxNSLATE API endpoint documentation
 ### Register User
 
 - **Method:** POST
@@ -30,7 +28,7 @@ This is the TRxNSLATE API endpoint documentation
 
 ---
 
-### User Login
+### 1.  User Login
 
 - **Method:** POST
 - **URL:** `http://localhost:8000/api/auth/login`
@@ -63,7 +61,7 @@ This is the TRxNSLATE API endpoint documentation
 
 ---
 
-### List All Users (Active Admin only)
+### 2.  List All Users (Active Admin only)
 
 - **Method:** GET
 - **URL:** `http://localhost:8000/api/auth/users`
@@ -97,7 +95,7 @@ This is the TRxNSLATE API endpoint documentation
 
 ---
 
-### Soft Delete a User (Active Admin only)
+### 3.  Soft Delete a User (Active Admin only)
 
 - **Method:** DELETE
 - **URL:** `http://localhost:8000/api/auth/delete_user/`
@@ -132,7 +130,7 @@ This is the TRxNSLATE API endpoint documentation
 
 ---
 
-### Perform OCR on an Input Image
+### 4.  Perform OCR on an Input Image
 
 - **Method:** POST
 - **URL:** `http://localhost:8000/api/model/ocr`
@@ -172,7 +170,7 @@ This is the TRxNSLATE API endpoint documentation
 
 ---
 
-### Generate LLM Explanations from Prescription Text
+### 5.  Generate LLM Explanations from Prescription Text
 
 - **Method:** POST
 - **URL:** `http://localhost:8000/api/model/generate_prescription_explanations`
