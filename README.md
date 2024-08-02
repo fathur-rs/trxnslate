@@ -59,6 +59,7 @@ The program will run on port `8000` and localhost.
 
 
 ## Endpoints Documentation
+Refer to the [Swagger UI](http://localhost:8000/api/swagger) to try the API directly.
 ### 1.  Register User
 
 - **Method:** POST
@@ -252,8 +253,6 @@ The program will run on port `8000` and localhost.
   - **401:** Unauthorized - Invalid or missing token, or missing 'Bearer' prefix
   - **500:** Internal Server Error - An error occurred during explanation generation
   
-## API Documentation
-For detailed API documentation, refer to the [Swagger UI](http://localhost:8000/api/swagger).
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
