@@ -2,5 +2,5 @@ __pycache__
 .env
 instance/
 README.html
-*.ipynb
+tester.ipynb
 RESEP_FINALE_v2-7
