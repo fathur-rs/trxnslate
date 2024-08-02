@@ -1,2 +1,2 @@
-# TRxNSLATE: OCR + LLMs for explaining handwritten medical prescription
+# TRxNSLATE API: OCR + LLMs for explaining handwritten medical prescription
 
