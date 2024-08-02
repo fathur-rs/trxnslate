@@ -51,11 +51,11 @@ def create_app():
         r"/api/auth/*": {"origins": os.getenv('AUTH_ALLOWED_ORIGIN', '*')}
     })
     
-    
     # Register Blueprint
     app.register_blueprint(model_blueprint, url_prefix='/api/model')
     app.register_blueprint(auth_blueprint, url_prefix='/api/auth')
     
+    # Create Admin
     create_admin.init_app(app)
-    
+        
     return app
