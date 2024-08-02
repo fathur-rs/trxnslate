@@ -5,7 +5,7 @@ This program utilizes advanced optical character recognition (OCR) system to ext
 This project specifically aims to support the Indonesian prescription format and language. It helps patients who struggle to read medical prescriptions due to lack of expertise or poor handwriting from doctors. Additionally, it offers the potential to streamline healthcare workflows by automating the prescription review process, thereby enhancing efficiency and accuracy in medical care.
 
 ## Endpoints Documentation
-### Register User
+### 1.  Register User
 
 - **Method:** POST
 - **URL:** `http://localhost:8000/api/auth/register`
@@ -26,9 +26,7 @@ This project specifically aims to support the Indonesian prescription format and
   - **409:** Conflict - User already exists or constraint violation
   - **500:** Internal Server Error - An error occurred during registration
 
----
-
-### 1.  User Login
+### 2.  User Login
 
 - **Method:** POST
 - **URL:** `http://localhost:8000/api/auth/login`
@@ -59,9 +57,7 @@ This project specifically aims to support the Indonesian prescription format and
   - **401:** Unauthorized - Invalid credentials
   - **500:** Internal Server Error - An error occurred during login
 
----
-
-### 2.  List All Users (Active Admin only)
+### 3.  List All Users (Active Admin only)
 
 - **Method:** GET
 - **URL:** `http://localhost:8000/api/auth/users`
@@ -93,9 +89,7 @@ This project specifically aims to support the Indonesian prescription format and
   - **403:** Forbidden - User is not an active admin
   - **500:** Internal Server Error - An error occurred while retrieving users
 
----
-
-### 3.  Soft Delete a User (Active Admin only)
+### 4.  Soft Delete a User (Active Admin only)
 
 - **Method:** DELETE
 - **URL:** `http://localhost:8000/api/auth/delete_user/`
@@ -128,9 +122,8 @@ This project specifically aims to support the Indonesian prescription format and
   - **409:** Conflict - User deletion failed due to a constraint violation
   - **500:** Internal Server Error - An error occurred during deleting user
 
----
 
-### 4.  Perform OCR on an Input Image
+### 5.  Perform OCR on an Input Image
 
 - **Method:** POST
 - **URL:** `http://localhost:8000/api/model/ocr`
@@ -168,9 +161,7 @@ This project specifically aims to support the Indonesian prescription format and
   - **401:** Unauthorized - Invalid or missing token, or missing 'Bearer' prefix
   - **500:** Internal Server Error - An error occurred during OCR processing
 
----
-
-### 5.  Generate LLM Explanations from Prescription Text
+### 6.  Generate LLM Explanations from Prescription Text
 
 - **Method:** POST
 - **URL:** `http://localhost:8000/api/model/generate_prescription_explanations`
