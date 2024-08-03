@@ -1,4 +1,3 @@
-import logging
 from flask import request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token, create_refresh_token
 from datetime import datetime

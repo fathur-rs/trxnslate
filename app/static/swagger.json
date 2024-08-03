@@ -368,13 +368,13 @@
     "OCRResponse": {
       "type": "object",
       "properties": {
-        "image": {
-          "type": "string",
-          "description": "Base64 encoded processed image with OCR annotations"
-        },
         "prescription_text": {
           "type": "string",
           "description": "Extracted text from the image"
+        },
+        "image": {
+          "type": "string",
+          "description": "Base64 encoded processed image with OCR annotations"
         }
       }
     },
