@@ -19,24 +19,28 @@ def register():
         user_data = authSchema.Register(**data)
         username = user_data.username
         password = user_data.password
-        
-        if not username or not password:
-            current_app.logger.warning("⚠️ Missing username or password")
-            return make_response_util(400, description="Missing username or password", error="Bad Request")
+        user_type = user_data.user_type
 
-        user = dbSchema.User.query.filter_by(username=username).first()
-        if user:
+        existing_user = dbSchema.User.query.filter_by(username=username).first()
+        existing_admin = dbSchema.Admin.query.filter_by(username=username).first()
+        if existing_user or existing_admin:
             current_app.logger.warning("⚠️ User already exists: %s", username)
             return make_response_util(409, description="User already exists", error="Conflict")
 
         hashed_password = generate_password_hash(password, method="pbkdf2:sha256", salt_length=16)
-        new_user = dbSchema.User(username=username, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
 
-        current_app.logger.info("🎉 New user registered: %s", username)
-    
-        return make_response_util(201, message="User created successfully")
+        if user_type == "user":
+            new_user = dbSchema.User(username=username, password=hashed_password)
+            db.session.add(new_user)
+        elif user_type == "admin":
+            new_admin = dbSchema.Admin(username=username, password=hashed_password)
+            db.session.add(new_admin)
+
+        db.session.commit()
+        current_app.logger.info("🎉 New %s registered: %s", user_type, username)
+
+        return make_response_util(201, message=f"{user_type.capitalize()} created successfully")
+
     except IntegrityError:
         db.session.rollback()
         current_app.logger.error("❌ User creation failed due to a constraint violation")

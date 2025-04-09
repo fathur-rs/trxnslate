@@ -7,7 +7,7 @@ from typing import List, Tuple
 
 import cv2
 import torch
-from ultralytics import YOLOv10
+from ultralytics import YOLO
 from transformers import VisionEncoderDecoderModel, TrOCRProcessor
 from huggingface_hub.utils import RepositoryNotFoundError
 from huggingface_hub import model_info
@@ -75,7 +75,7 @@ class OpticalCharacterRecognition:
         absolute_path = os.path.join(self.cwd, "ml_model/yolov10/best.pt")
         logging.info(f"📂 YOLO model local path: {absolute_path}")
         if os.path.exists(absolute_path):
-            return YOLOv10(absolute_path)
+            return YOLO(absolute_path)
         else:
             raise FileNotFoundError(f"❌ YOLO model not found at {absolute_path}")
 

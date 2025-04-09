@@ -13,6 +13,7 @@ import numpy as np
 from jwt import ExpiredSignatureError, DecodeError, InvalidTokenError
 from dotenv import load_dotenv 
 load_dotenv()
+import logging
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
@@ -60,6 +61,7 @@ def admin_required(f):
     def decorated_admin_required(*args, **kwargs):
         current_user_id = get_jwt_identity()
         admin = dbSchema.Admin.query.get(current_user_id)
+    
         if not admin or not admin.is_active:
             abort(403, description="Admin access required")
         return f(*args, **kwargs)

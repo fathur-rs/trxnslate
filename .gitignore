@@ -4,3 +4,5 @@ instance/
 README.html
 tester.ipynb
 RESEP_FINALE_v2-7
+*.jpg
+instance/

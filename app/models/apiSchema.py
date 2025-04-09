@@ -1,8 +1,10 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, ConfigDict
 import base64
 import binascii
     
 class InputImageBase64(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
     image: str
     
     @field_validator('image')
@@ -28,6 +30,8 @@ class InputImageBase64(BaseModel):
             raise ValueError(f"Error validating base64 image: {str(e)}")
         
 class PrescriptionText(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
     prescription_text: str
     
     

@@ -1,14 +1,19 @@
 version: '3.8'
 
 services:
-  flask-app:
-    build: .
+  trxnslate-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trxnslate-api:1.0    
     ports:
       - "8000:8000"
     volumes:
-      - user-db:/app/instance  
+      - .:/app
+      - user-db:/app/instance
     env_file:
       - .env
+    restart: unless-stopped
 
 volumes:
-  user-db: 
+  user-db:

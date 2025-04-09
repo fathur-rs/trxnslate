@@ -1,10 +1,19 @@
-from pydantic import BaseModel, field_validator, Field
+from pydantic import BaseModel, field_validator, Field, ConfigDict
 import re
+from enum import Enum
 from ..utilities import make_response_util
 
+class UserType(str, Enum):
+    user = "user"
+    admin = "admin"
+
 class Register(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
     username: str = Field(..., min_length=1, max_length=80)
     password: str = Field(..., min_length=12)
+    user_type: UserType = Field(default=UserType.user)
+
     
     @field_validator('username')
     def check_username(cls, v):
@@ -20,9 +29,11 @@ class Register(BaseModel):
         return v
     
 class Login(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
     username: str = Field(..., min_length=1, max_length=80)
     password: str = Field(..., min_length=1)
-    user_type: str = Field(default='user')
+    user_type: UserType = Field(default=UserType.user)
     
     @field_validator('username')
     def check_username(cls, v):
