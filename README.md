@@ -1,4 +1,8 @@
-# TRxNSLATE API: OCR + LLMs for explaining handwritten medical prescription
+# TRxNSLATE API: OCR + LLMs for Explaining Handwritten Medical Prescriptions
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/badge/python-3.9-blue.svg?style=flat-square)](https://www.python.org/downloads/release/python-390/)
+[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-Supported-blue?style=flat-square&logo=docker)](https://docs.docker.com/compose/)
 
 This program utilizes optical character recognition (OCR) system to extract and digitize handwritten text from medical prescription images. It employs YOLOv10 to detect and highlight critical elements within the prescription, such as drug names, instructions, and dosages. These detected segments are then cropped and processed using Transformer Optical Character Recognition (TrOCR), which converts the handwritten segments into digital text. Finally, the digitized prescription text is passed to a Large Language Model, primarily using LLama 3.1 70B, with extensive prompt engineering to generate easy-to-understand explanations of the prescription.
 
